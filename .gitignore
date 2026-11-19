@@ -1,0 +1,8 @@
+# Large video files — don't push to GitHub
+*.mp4
+*.mov
+*.avi
+
+# OS junk
+.DS_Store
+Thumbs.db

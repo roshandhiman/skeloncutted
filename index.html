@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SKELTONCUTED</title>
+  <style>
+    /* ─── RESET ───────────────────────────────────────────────── */
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: auto; }
+
+    body {
+      background: #000;
+      color: #fff;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      overflow-x: hidden;
+    }
+
+    /* ─── OWNER NAME — TOP RIGHT ─────────────────────────────── */
+    #owner-name {
+      position: fixed;
+      top: 28px;
+      right: 36px;
+      z-index: 999;
+      text-align: right;
+      pointer-events: none;
+      line-height: 1.1;
+    }
+
+    #owner-name .first {
+      display: block;
+      font-size: clamp(22px, 2.8vw, 38px);
+      font-weight: 900;
+      color: #fff;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      text-shadow:
+        0 0 20px rgba(255,255,255,0.6),
+        0 0 50px rgba(255,255,255,0.25),
+        0 2px 8px rgba(0,0,0,0.9);
+      animation: nameReveal 1.4s cubic-bezier(.16,1,.3,1) both,
+                 namePulse 3.5s 1.4s ease-in-out infinite;
+    }
+
+    #owner-name .last {
+      display: block;
+      font-size: clamp(14px, 1.7vw, 22px);
+      font-weight: 300;
+      color: rgba(255,255,255,0.65);
+      letter-spacing: 0.5em;
+      text-transform: uppercase;
+      text-shadow: 0 0 20px rgba(255,255,255,0.3), 0 2px 6px rgba(0,0,0,0.9);
+      animation: nameReveal 1.4s 0.15s cubic-bezier(.16,1,.3,1) both,
+                 namePulse 3.5s 1.6s ease-in-out infinite;
+    }
+
+    /* character-by-character shimmer line */
+    #owner-name .shimmer-line {
+      display: block;
+      width: 100%;
+      height: 1px;
+      margin-top: 6px;
+      background: linear-gradient(90deg,
+        transparent 0%,
+        rgba(255,255,255,0.8) 50%,
+        transparent 100%);
+      background-size: 200% 100%;
+      animation: shimmerSlide 2.5s 1.6s ease-in-out infinite;
+    }
+
+    @keyframes nameReveal {
+      from { opacity: 0; transform: translateX(40px) skewX(-8deg); filter: blur(8px); }
+      to   { opacity: 1; transform: translateX(0)    skewX(0deg);  filter: blur(0); }
+    }
+    @keyframes namePulse {
+      0%, 100% { text-shadow: 0 0 20px rgba(255,255,255,0.6), 0 0 50px rgba(255,255,255,0.25), 0 2px 8px rgba(0,0,0,0.9); }
+      50%       { text-shadow: 0 0 35px rgba(255,255,255,0.95), 0 0 80px rgba(255,255,255,0.4), 0 2px 8px rgba(0,0,0,0.9); }
+    }
+    @keyframes shimmerSlide {
+      0%   { background-position: 200% 0; opacity: 0; }
+      20%  { opacity: 1; }
+      80%  { opacity: 1; }
+      100% { background-position: -200% 0; opacity: 0; }
+    }
+
+    /* ─── SCROLL CANVAS SECTION ──────────────────────────────── */
+    #scroll-driver {
+      /* height = number of frames * scroll-per-frame pixels */
+      height: 24000px; /* 240 frames × 100px each */
+      position: relative;
+    }
+
+    #sticky-wrap {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      width: 100vw;
+      overflow: hidden;
+    }
+
+    /* ─── CANVAS (frame-by-frame) ────────────────────────────── */
+    #frame-canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      z-index: 0;
+    }
+
+    /* ─── VIGNETTE ───────────────────────────────────────────── */
+    .vignette {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      pointer-events: none;
+      background: radial-gradient(ellipse at center,
+        transparent 40%,
+        rgba(0,0,0,0.65) 100%);
+    }
+
+    /* ─── GRAIN OVERLAY ──────────────────────────────────────── */
+    .grain {
+      position: absolute;
+      inset: 0;
+      z-index: 2;
+      pointer-events: none;
+      opacity: 0.04;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+      background-size: 180px;
+      animation: grain 0.4s steps(1) infinite;
+    }
+    @keyframes grain {
+      0%  { transform: translate(0, 0); }
+      25% { transform: translate(-3px, 2px); }
+      50% { transform: translate(2px, -3px); }
+      75% { transform: translate(-2px, -2px); }
+     100% { transform: translate(3px, 3px); }
+    }
+
+    /* ─── HERO TEXT ──────────────────────────────────────────── */
+    #hero-text {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 10;
+      text-align: center;
+      pointer-events: none;
+      width: 90vw;
+    }
+
+    #hero-text .tagline {
+      display: block;
+      font-size: clamp(14px, 2vw, 22px);
+      letter-spacing: 0.45em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.55);
+      margin-bottom: 20px;
+      font-weight: 300;
+      animation: fadeSlideUp 1.2s ease both;
+    }
+
+    #hero-text h1 {
+      font-size: clamp(72px, 13vw, 180px);
+      font-weight: 900;
+      text-transform: uppercase;
+      color: #fff;
+      line-height: 0.9;
+      letter-spacing: -0.02em;
+      text-shadow:
+        0 0 60px rgba(255,255,255,0.15),
+        0 0 120px rgba(255,255,255,0.08);
+      animation: fadeSlideUp 1s 0.2s ease both;
+    }
+
+    #hero-text .sub {
+      display: block;
+      margin-top: 24px;
+      font-size: clamp(14px, 2.2vw, 24px);
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.4);
+      font-weight: 300;
+      animation: fadeSlideUp 1s 0.4s ease both;
+    }
+
+    @keyframes fadeSlideUp {
+      from { opacity: 0; transform: translateY(40px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ─── 3D TILT WRAPPER ────────────────────────────────────── */
+    #tilt-box {
+      position: absolute;
+      inset: 0;
+      z-index: 3;
+      perspective: 1200px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+    }
+    #tilt-inner {
+      width: 100%;
+      height: 100%;
+      transform-style: preserve-3d;
+      transition: transform 0.08s linear;
+      position: relative;
+    }
+
+    /* ─── SCROLL PROGRESS BAR ────────────────────────────────── */
+    #progress-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 3px;
+      width: 0%;
+      background: linear-gradient(90deg, #fff 0%, rgba(255,255,255,0.3) 100%);
+      z-index: 999;
+      transition: width 0.05s linear;
+    }
+
+    /* ─── FRAME COUNTER ──────────────────────────────────────── */
+    #frame-counter {
+      position: fixed;
+      bottom: 32px;
+      right: 36px;
+      z-index: 999;
+      font-size: 11px;
+      letter-spacing: 0.25em;
+      color: rgba(255,255,255,0.3);
+      font-family: monospace;
+      text-transform: uppercase;
+    }
+
+    /* ─── SCROLL HINT ────────────────────────────────────────── */
+    #scroll-hint {
+      position: fixed;
+      bottom: 40px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 999;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      opacity: 1;
+      transition: opacity 0.5s ease;
+    }
+    #scroll-hint span {
+      font-size: 10px;
+      letter-spacing: 0.4em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.4);
+    }
+    #scroll-hint .arrow {
+      width: 1px;
+      height: 40px;
+      background: linear-gradient(to bottom, rgba(255,255,255,0.5), transparent);
+      animation: arrowBounce 1.6s ease-in-out infinite;
+    }
+    @keyframes arrowBounce {
+      0%, 100% { transform: translateY(0); opacity: 0.5; }
+      50%       { transform: translateY(6px); opacity: 1; }
+    }
+
+    /* ─── CONTENT SECTIONS (after the scroll animation) ──────── */
+    #content-sections {
+      position: relative;
+      z-index: 20;
+      background: #000;
+    }
+
+    .section {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 80px 10vw;
+      border-top: 1px solid rgba(255,255,255,0.06);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .section::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse 60% 60% at 50% 50%,
+        rgba(255,255,255,0.03) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .section-eyebrow {
+      font-size: 11px;
+      letter-spacing: 0.5em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.3);
+      margin-bottom: 24px;
+      font-weight: 400;
+    }
+
+    .section-title {
+      font-size: clamp(48px, 8vw, 120px);
+      font-weight: 900;
+      text-transform: uppercase;
+      color: #fff;
+      text-align: center;
+      line-height: 0.95;
+      letter-spacing: -0.02em;
+      margin-bottom: 32px;
+    }
+
+    .section-body {
+      font-size: clamp(16px, 2vw, 22px);
+      color: rgba(255,255,255,0.45);
+      text-align: center;
+      max-width: 680px;
+      line-height: 1.7;
+      font-weight: 300;
+    }
+
+    /* ─── ANIMATED GRADIENT BORDER CARD ─────────────────────── */
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 2px;
+      margin-top: 60px;
+      width: 100%;
+      max-width: 900px;
+    }
+    .stat-card {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.08);
+      padding: 48px 32px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+      transition: background 0.3s;
+    }
+    .stat-card:hover { background: rgba(255,255,255,0.06); }
+    .stat-card .num {
+      font-size: clamp(48px, 6vw, 80px);
+      font-weight: 900;
+      color: #fff;
+      line-height: 1;
+      letter-spacing: -0.03em;
+    }
+    .stat-card .label {
+      font-size: 11px;
+      letter-spacing: 0.4em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.3);
+      margin-top: 12px;
+      display: block;
+    }
+
+    /* ─── VISIBILITY ANIMATION ───────────────────────────────── */
+    .reveal {
+      opacity: 0;
+      transform: translateY(50px);
+      transition: opacity 0.9s ease, transform 0.9s ease;
+    }
+    .reveal.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    @media (max-width: 768px) {
+      .stat-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Progress bar -->
+<div id="progress-bar"></div>
+
+<!-- Owner name TOP RIGHT -->
+<div id="owner-name">
+  <span class="first" id="name-first">ROSHANPREET</span>
+  <span class="last" id="name-last">SINGH</span>
+  <span class="shimmer-line"></span>
+</div>
+
+<!-- Frame counter -->
+<div id="frame-counter">frame 001 / 246</div>
+
+<!-- Scroll hint -->
+<div id="scroll-hint">
+  <span>Scroll</span>
+  <div class="arrow"></div>
+</div>
+
+<!-- ── SCROLL-DRIVEN ANIMATION SECTION ──────────────────────── -->
+<section id="scroll-driver">
+  <div id="sticky-wrap">
+
+    <!-- 3D tilt wrapper -->
+    <div id="tilt-box">
+      <div id="tilt-inner">
+        <!-- The frame canvas -->
+        <canvas id="frame-canvas"></canvas>
+        <!-- Overlays -->
+        <div class="vignette"></div>
+        <div class="grain"></div>
+        <!-- Hero text -->
+        <div id="hero-text">
+          <span class="tagline">The Animation</span>
+          <h1 id="main-title">SKELTON<br>CUTED</h1>
+          <span class="sub" id="sub-text">240 frames · Scroll to animate</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ── CONTENT SECTIONS ──────────────────────────────────────── -->
+<div id="content-sections">
+
+  <div class="section">
+    <p class="section-eyebrow reveal">Chapter I</p>
+    <h2 class="section-title reveal">DEAD<br>MOTION</h2>
+    <p class="section-body reveal">
+      Every bone tells a story. Every frame is a heartbeat in the dark —
+      an animation carved from silence, delivered through motion.
+    </p>
+    <div class="stat-grid">
+      <div class="stat-card reveal">
+        <div class="num">240</div>
+        <span class="label">Total Frames</span>
+      </div>
+      <div class="stat-card reveal" style="transition-delay:0.1s">
+        <div class="num">60</div>
+        <span class="label">FPS</span>
+      </div>
+      <div class="stat-card reveal" style="transition-delay:0.2s">
+        <div class="num">8.2<span style="font-size:0.4em">s</span></div>
+        <span class="label">Duration</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <p class="section-eyebrow reveal">Chapter II</p>
+    <h2 class="section-title reveal">PURE<br>DARK</h2>
+    <p class="section-body reveal">
+      No backend. No compromise. Just raw pixels, raw scroll,
+      and a skeleton that moves to your command.
+    </p>
+  </div>
+
+  <div class="section">
+    <p class="section-eyebrow reveal">The End</p>
+    <h2 class="section-title reveal" style="font-size: clamp(80px, 15vw, 200px);">∞</h2>
+    <p class="section-body reveal">Loop it. Live it. Own it.</p>
+  </div>
+
+</div>
+
+<script>
+  /* ═══════════════════════════════════════════════════════════
+     LETTER-BY-LETTER GLITCH on scroll progress
+  ═══════════════════════════════════════════════════════════ */
+  const CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ!@#$%&*';
+  function glitchText(el, original, duration = 800) {
+    let frame = 0;
+    const totalFrames = Math.ceil(duration / 40);
+    const interval = setInterval(() => {
+      let result = '';
+      for (let i = 0; i < original.length; i++) {
+        if (original[i] === ' ') { result += ' '; continue; }
+        if (frame / totalFrames > i / original.length) {
+          result += original[i];
+        } else {
+          result += CHARS[Math.floor(Math.random() * CHARS.length)];
+        }
+      }
+      el.textContent = result;
+      frame++;
+      if (frame > totalFrames) {
+        el.textContent = original;
+        clearInterval(interval);
+      }
+    }, 40);
+  }
+
+  // Trigger glitch every time scroll crosses a threshold
+  let lastGlitchFrame = -1;
+  const glitchEvery = 30; // every 30 frames, re-glitch
+
+  /* ═══════════════════════════════════════════════════════════
+     FRAME-BY-FRAME SCROLL ANIMATION
+  ═══════════════════════════════════════════════════════════ */
+  const TOTAL_FRAMES = 240;
+  const canvas  = document.getElementById('frame-canvas');
+  const ctx     = canvas.getContext('2d');
+  const counter = document.getElementById('frame-counter');
+  const hint    = document.getElementById('scroll-hint');
+  const pBar    = document.getElementById('progress-bar');
+  const tiltInner = document.getElementById('tilt-inner');
+  const mainTitle = document.getElementById('main-title');
+  const subText   = document.getElementById('sub-text');
+
+  /* ── Resize canvas ── */
+  function resizeCanvas() {
+    canvas.width  = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+  resizeCanvas();
+  window.addEventListener('resize', resizeCanvas);
+
+  /* ── Preload frames ── */
+  const frames = [];
+  let loadedCount = 0;
+  let firstFrameReady = false;
+
+  function pad(n, len = 4) { return String(n).padStart(len, '0'); }
+
+  function loadFrame(i) {
+    return new Promise(resolve => {
+      const img = new Image();
+      img.src = `frames/frame_${pad(i)}.jpg`;
+      img.onload = () => {
+        frames[i - 1] = img;
+        loadedCount++;
+
+        // Draw first frame immediately
+        if (i === 1 && !firstFrameReady) {
+          firstFrameReady = true;
+          drawFrame(0);
+        }
+        resolve();
+      };
+      img.onerror = () => { loadedCount++; resolve(); };
+    });
+  }
+
+  // Load frame 1 first, then rest in background
+  loadFrame(1).then(() => {
+    for (let i = 2; i <= TOTAL_FRAMES; i++) loadFrame(i);
+  });
+
+  /* ── Draw a frame by index (0-based) ── */
+  function drawFrame(idx) {
+    const img = frames[idx];
+    if (!img) return;
+    const cw = canvas.width, ch = canvas.height;
+    const iw = img.naturalWidth,  ih = img.naturalHeight;
+    const scale = Math.max(cw / iw, ch / ih);
+    const dw = iw * scale, dh = ih * scale;
+    const dx = (cw - dw) / 2, dy = (ch - dh) / 2;
+    ctx.clearRect(0, 0, cw, ch);
+    ctx.drawImage(img, dx, dy, dw, dh);
+  }
+
+  /* ── Current frame tracking ── */
+  let currentFrame = 0;
+  let targetFrame  = 0;
+  let rafId = null;
+  let lastScrollY = -1;
+
+  /* ── Smooth frame lerp ── */
+  function lerp(a, b, t) { return a + (b - a) * t; }
+
+  function animateLoop() {
+    rafId = requestAnimationFrame(animateLoop);
+
+    // Smooth frame interpolation
+    const diff = targetFrame - currentFrame;
+    if (Math.abs(diff) > 0.4) {
+      currentFrame = lerp(currentFrame, targetFrame, 0.14);
+    } else {
+      currentFrame = targetFrame;
+    }
+
+    const fi = Math.round(currentFrame);
+    if (frames[fi]) drawFrame(fi);
+      counter.textContent = `frame ${String(fi + 1).padStart(3, '0')} / ${TOTAL_FRAMES}`;
+  }
+  animateLoop();
+
+  /* ── Scroll handler ── */
+  function onScroll() {
+    const scrollY   = window.scrollY;
+    const driver    = document.getElementById('scroll-driver');
+    const maxScroll = driver.scrollHeight - window.innerHeight;
+    const progress  = Math.min(Math.max(scrollY / maxScroll, 0), 1);
+
+    // Progress bar
+    pBar.style.width = (progress * 100) + '%';
+
+    // Frame target
+    targetFrame = Math.min(Math.floor(progress * (TOTAL_FRAMES - 1)), TOTAL_FRAMES - 1);
+
+    // Glitch name on scroll milestones
+    const fi = Math.round(targetFrame);
+    if (Math.floor(fi / glitchEvery) !== Math.floor(lastGlitchFrame / glitchEvery)) {
+      glitchText(document.getElementById('name-first'), 'ROSHANPREET', 700);
+      setTimeout(() => glitchText(document.getElementById('name-last'), 'SINGH', 500), 150);
+      lastGlitchFrame = fi;
+    }
+
+    // Hide scroll hint after slight scroll
+    if (scrollY > 80) {
+      hint.style.opacity = '0';
+      hint.style.pointerEvents = 'none';
+    } else {
+      hint.style.opacity = '1';
+    }
+
+    // Text fade as you scroll into animation
+    const fadeStart = 0.03, fadeEnd = 0.18;
+    const textOpacity = progress < fadeStart ? 1
+      : progress > fadeEnd ? 0
+      : 1 - (progress - fadeStart) / (fadeEnd - fadeStart);
+    document.getElementById('hero-text').style.opacity = textOpacity;
+
+    // 3D tilt based on scroll velocity
+    const delta = scrollY - lastScrollY;
+    lastScrollY = scrollY;
+    const tiltX = Math.min(Math.max(delta * 0.08, -6), 6);
+    tiltInner.style.transform = `rotateX(${-tiltX}deg) rotateY(0deg)`;
+    // Reset tilt smoothly
+    clearTimeout(window._tiltReset);
+    window._tiltReset = setTimeout(() => {
+      tiltInner.style.transition = 'transform 0.6s ease';
+      tiltInner.style.transform = 'rotateX(0deg) rotateY(0deg)';
+      setTimeout(() => { tiltInner.style.transition = 'transform 0.08s linear'; }, 650);
+    }, 100);
+  }
+
+  window.addEventListener('scroll', onScroll, { passive: true });
+
+  /* ── Mousemove 3D parallax on sticky section ── */
+  let mouseX = 0, mouseY = 0;
+  document.addEventListener('mousemove', e => {
+    if (window.scrollY > window.innerHeight) return; // only on sticky
+    const cx = window.innerWidth  / 2;
+    const cy = window.innerHeight / 2;
+    mouseX = (e.clientX - cx) / cx;
+    mouseY = (e.clientY - cy) / cy;
+    // subtle tilt
+    tiltInner.style.transform =
+      `rotateX(${-mouseY * 4}deg) rotateY(${mouseX * 4}deg)`;
+  });
+
+  /* ═══════════════════════════════════════════════════════════
+     INTERSECTION OBSERVER — reveal on scroll
+  ═══════════════════════════════════════════════════════════ */
+  const revealEls = document.querySelectorAll('.reveal');
+  const revealObs = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.classList.add('visible');
+        revealObs.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.15 });
+
+  revealEls.forEach(el => revealObs.observe(el));
+</script>
+
+</body>
+</html>
